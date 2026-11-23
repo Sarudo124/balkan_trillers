@@ -18,7 +18,7 @@ Benötigt nur Python ≥ 3.10 und `numpy` (im Cluster-venv aus `LLM_Practical_KI
 Keine weiteren Bibliotheken; WAV- und PNG-Dateien werden mit der Standardbibliothek geschrieben.
 
 ```bash
-cd ornaments
+git clone https://github.com/Sarudo124/balkan_trillers.git && cd balkan_trillers
 python ornaments.py                                              # Demo: Ornament -> Noten -> Tokens
 python make_synthetic_data.py showcase --out data/showcase       # je 1 Beispiel pro Ornament-Variante
 python make_synthetic_data.py random --n 2000 --context --out data/train   # Trainingsdaten

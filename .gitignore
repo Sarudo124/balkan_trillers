@@ -1,13 +1,7 @@
-# Nur ausdrücklich freigegebene Ordner landen im Repo.
-# (context/ und LLM_Practical_KIT/ bleiben lokal.)
-/*
-!/.gitignore
-!/ornaments/
-
 # erzeugte Daten: nur den kleinen Showcase-Datensatz versionieren,
 # alles andere ist reproduzierbar (python make_synthetic_data.py ...)
-/ornaments/data/*
-!/ornaments/data/showcase/
+/data/*
+!/data/showcase/
 
 __pycache__/
 *.pyc

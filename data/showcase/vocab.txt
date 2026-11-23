@@ -1,6 +1,7 @@
 <pad>
 <bos>
 <eos>
+REST
 ORN_PRALL
 ORN_MORDENT
 ORN_TRILL

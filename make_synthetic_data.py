@@ -3,7 +3,7 @@ Erzeugt synthetische Trainingsdaten: immer EIN Ornament pro Beispiel.
 
 Zwei Modi:
   showcase  -> je ein sauberes Beispiel für jedes Ornament x jeden Abstand
-               (zum Anhören / Zeigen im Meeting)
+               (11 Beispiele, zum Anhören / Zeigen im Meeting)
                python make_synthetic_data.py showcase --out data/showcase
 
   random    -> viele zufällige Beispiele (Tonhöhe, Tempo, Geschwindigkeit des
@@ -23,18 +23,19 @@ from pathlib import Path
 
 import numpy as np
 
-from ornaments import (INTERVALS, ORNAMENTS, OrnamentedNote, build_vocab,
+from ornaments import (INTERVALS, ORNAMENTS, OrnamentedNote, Rest, build_vocab,
                        expand_ornament, midi_to_name, n_fast_notes, to_tokens)
 from synth import augment, render, write_wav
 
 SR = 24000          # MERT arbeitet auch mit 24 kHz -> später direkt vergleichbar
 
 
-def score_to_notes(score: list[OrnamentedNote], start: float = 0.2):
-    """Notenblatt -> gespielte Noten (mit Startzeiten)."""
+def score_to_notes(score: list[OrnamentedNote | Rest], start: float = 0.2):
+    """Notenblatt -> gespielte Noten (mit Startzeiten). Pausen = nur Zeit vergeht."""
     played, t = [], start
     for n in score:
-        played += expand_ornament(n, t)
+        if not isinstance(n, Rest):
+            played += expand_ornament(n, t)
         t += n.duration
     return played
 
@@ -65,8 +66,7 @@ def save_example(i, out, score, bpm, rng, sound, do_augment, labels_file):
 
 
 def showcase(out: Path, main_midi: int = 74, bpm: float = 90):
-    """Jedes Ornament x Halbton/Ganzton auf D5 -- einmal in normalem Tempo
-    (70 ms pro schneller Note) und einmal verlangsamt (180 ms) zum Mithören."""
+    """Jedes Ornament x jeder Abstand auf D5, 70 ms pro schneller Note."""
     rng = np.random.default_rng(0)
     beat = 60 / bpm
     sound = {"reeds_cents": (0.0, -12.0, 12.0)}
@@ -75,11 +75,11 @@ def showcase(out: Path, main_midi: int = 74, bpm: float = 90):
         for orn in ORNAMENTS:
             ups, downs = INTERVALS[orn]
             ups, downs = ups or (0,), downs or (0,)   # 0 = wird nicht benutzt
-            for up, down, speed in itertools.product(ups, downs, (0.07, 0.18)):
+            for up, down in itertools.product(ups, downs):
                 score = [OrnamentedNote(main_midi, 2 * beat, orn, up=up, down=down,
-                                        orn_note_dur=speed)]
+                                        orn_note_dur=0.07)]
                 r = save_example(i, out, score, bpm, rng, sound, False, f)
-                print(f"{r['id']}  {r['tokens']:45s} {speed * 1000:.0f} ms/Note")
+                print(f"{r['id']}  {r['tokens']}")
                 i += 1
 
 
@@ -125,7 +125,10 @@ def random_examples(out: Path, n: int, seed: int, context: bool, p_plain: float)
                                         int(rng.choice([2, 4])) * sixteenth)
                 after = OrnamentedNote(note.main_midi + int(rng.integers(-4, 5)),
                                        int(rng.choice([2, 4])) * sixteenth)
-                score = [before, note, after]
+                # mit 30 % Wahrscheinlichkeit eine Pause (50-400 ms) zwischen zwei Noten
+                pause = lambda: ([Rest(float(rng.uniform(0.05, 0.4)))]
+                                 if rng.random() < 0.3 else [])
+                score = [before] + pause() + [note] + pause() + [after]
 
             sound = {
                 "reeds_cents": (0.0,) if rng.random() < 0.3

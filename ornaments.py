@@ -81,6 +81,12 @@ class OrnamentedNote:
     orn_note_durs: list[float] | None = None
 
 
+@dataclass
+class Rest:
+    """Eine Pause im Notenblatt (Stille zwischen zwei Noten)."""
+    duration: float              # Dauer der Pause (s)
+
+
 def uses(ornament: str) -> tuple[bool, bool]:
     """Benutzt das Ornament eine obere / untere Hilfsnote?"""
     pattern = ORNAMENTS[ornament]
@@ -130,6 +136,7 @@ def expand_ornament(n: OrnamentedNote, onset: float) -> list[Note]:
 # Idee: Jede Eigenschaft einer Note ist EIN Token (wie ein Wort im Satz).
 #   normale Note:       NOTE_D5 TIME_400
 #   Note mit Ornament:  ORN_PRALL NOTE_D5 UP_1 TIME_400
+#   Pause:              REST TIME_200
 #
 # TIME_x = Dauer der ganzen Note in Millisekunden, gerundet auf 50 ms.
 # Bei einer Note mit Ornament zählt die GESAMTE Note (alle Ornament-Töne +
@@ -149,10 +156,12 @@ def time_token(seconds: float) -> str:
     return f"TIME_{ms}"
 
 
-def to_tokens(score: list[OrnamentedNote]) -> list[str]:
+def to_tokens(score: list[OrnamentedNote | Rest]) -> list[str]:
     tokens = ["<bos>"]
     for n in score:
-        if n.ornament is not None:
+        if isinstance(n, Rest):
+            tokens.append("REST")
+        elif n.ornament is not None:
             has_up, has_down = uses(n.ornament)
             tokens.append(f"ORN_{n.ornament}")
             tokens.append(f"NOTE_{midi_to_name(n.main_midi)}")
@@ -170,6 +179,7 @@ def to_tokens(score: list[OrnamentedNote]) -> list[str]:
 def build_vocab(midi_range=range(48, 97)) -> list[str]:
     """Alle möglichen Tokens -> Token-ID = Position in dieser Liste."""
     vocab = list(SPECIAL_TOKENS)
+    vocab += ["REST"]
     vocab += [f"ORN_{o}" for o in ORNAMENTS]
     vocab += [f"NOTE_{midi_to_name(m)}" for m in midi_range]
     vocab += [f"UP_{i}" for i in UP_INTERVALS]
